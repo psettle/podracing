@@ -12,7 +12,6 @@ INCLUDE += src
 #source includes
 SOURCES += src/main.cpp
 SOURCES += src/GameServer.cpp
-SOURCES += src/Vector.cpp
 SOURCES += src/Pod.cpp
 SOURCES += src/Player.cpp
 

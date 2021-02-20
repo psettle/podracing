@@ -15,7 +15,7 @@ void GameController::InitMap() {
   map_string << num_checkpoints << std::endl;
 
   for (int i = 0; i < num_checkpoints; ++i) {
-    map_.push_back(Vector(std::rand() % 16000, std::rand() % 9000));
+    map_.push_back(Vec2(std::rand() % 16000, std::rand() % 9000));
 
     map_string << map_.back().x() << " " << map_.back().y() << std::endl;
     std::cout << map_.back().x() << " " << map_.back().y() << std::endl;
@@ -31,11 +31,11 @@ void GameController::InitPods() {
 
   /* Pods are placed on a line passing through the checkpoint perpendicular to
    * the vector pointing to the first checkpoint. */
-  Vector initial_direction(map_[0], map_[1]);
-  Vector placement_line = initial_direction.Perpendicular();
+  Vec2 initial_direction = map_[1] - map_[0];
+  Vec2 placement_line = Vec2::Perpendicular(initial_direction);
   placement_line.Normalize();
 
-  Vector start(map_[0]);
+  Vec2 start(map_[0]);
 
   /* Player 0 gets inside lane */
   player_0_.pod(0).SetPosition(start, placement_line, seperation / 2);
@@ -53,7 +53,6 @@ void GameController::InitPods() {
 }
 
 int GameController::Turn() {
-  frame_count++;
   std::cout << "frame: " << frame_count << std::endl;
   /* Tell players the current game state. */
   std::ostringstream player_0_data;
@@ -112,6 +111,7 @@ int GameController::Turn() {
 
   player_0_.EndTurn();
   player_1_.EndTurn();
+  frame_count++;
 
   if (player_1_.has_lost()) {
     return 0;
@@ -161,8 +161,8 @@ bool GameController::GetNextCheckpointCollision(double& dt, Pod*& pod) {
   for (unsigned int i = 0; i < 4; ++i) {
     double collision_time;
     Pod const* p = pods[i];
-    Vector const& checkpoint = map_.at(p->next_checkpoint());
-    if (GetNextCollision(p->position(), p->velocity(), 0, checkpoint, Vector(0, 0), 600,
+    Vec2 const& checkpoint = map_.at(p->next_checkpoint());
+    if (GetNextCollision(p->position(), p->velocity(), 0, checkpoint, Vec2(0, 0), 600,
                          collision_time)) {
       if (collision_time < collision_times[i] && collision_time < 1.0) {
         collision_times[i] = collision_time;
@@ -228,17 +228,15 @@ bool GameController::GetNextPlayerCollision(double& dt, Pod*& pod1, Pod*& pod2) 
   return true;
 }
 
-bool GameController::GetNextCollision(Vector const& p1, Vector const& v1, double r1,
-                                      Vector const& p2, Vector const& v2, double r2, double& dt) {
-  double dpx = p2.x() - p1.x();
-  double dpy = p2.y() - p1.y();
-  double dvx = v2.x() - v1.x();
-  double dvy = v2.y() - v1.y();
+bool GameController::GetNextCollision(Vec2 const& p1, Vec2 const& v1, double r1, Vec2 const& p2,
+                                      Vec2 const& v2, double r2, double& dt) {
+  Vec2 dp = p2 - p1;
+  Vec2 dv = v2 - v1;
   double r = r1 + r2;
 
-  double a = dvy * dvy + dvx * dvx;
-  double b = 2 * dvy * dpy + 2 * dvx * dpx;
-  double c = dpy * dpy + dpx * dpx - r * r;
+  double a = Vec2::Dot(dv, dv);
+  double b = 2 * Vec2::Dot(dv, dp);
+  double c = Vec2::Dot(dp, dp) - r * r;
 
   double disc = b * b - 4 * a * c;
 

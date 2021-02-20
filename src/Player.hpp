@@ -7,7 +7,7 @@
 #include <vector>
 #include "IPlayer.hpp"
 #include "Pod.hpp"
-#include "Vector.hpp"
+#include "Vec2.hpp"
 
 class Player {
  public:

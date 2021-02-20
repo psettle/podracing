@@ -4,10 +4,12 @@
 void Pod::WritePodState(std::ostream& output) const {
   output << static_cast<int>(position_.x()) << " " << static_cast<int>(position_.y()) << " "
          << static_cast<int>(velocity_.x()) << " " << static_cast<int>(velocity_.y()) << " "
-         << direction_.ToDegrees() << " " << target_checkpoint_ << std::endl;
+         << direction_.Degrees() << " " << target_checkpoint_ << std::endl;
 }
 
 void Pod::SetTurnConditions(PodControl const& control, int& boosts_available) {
+  static double const kMaxAngle = Vec2::pi() / 10;
+
   /* Figure out current thrust value */
   int boost = GetBoost(control, boosts_available);
   if (shield_cooldown_ > 0) {
@@ -15,24 +17,20 @@ void Pod::SetTurnConditions(PodControl const& control, int& boosts_available) {
   }
 
   /* Turn vehicle as much as allowed */
-  Vector desired_direction(position_, Vector(control.x, control.y));
+  Vec2 desired_direction = Vec2(control.x, control.y) - position_;
   desired_direction.Normalize();
-  double dot = direction_.Dot(desired_direction);
-  if (dot > 1.0) {
-    dot = 1.0;
-  } else if (dot < -1.0) {
-    dot = -1.0;
-  }
-  double da = std::acos(dot);
-  if (da < 0.314159) {
+  double dot = Vec2::Cap(Vec2::Dot(direction_, desired_direction), 1.0);
+
+  double angle = std::acos(dot);
+  if (angle < kMaxAngle) {
     direction_ = desired_direction;
   } else {
-    double cross = direction_.Cross(desired_direction);
-    direction_.Rotate(cross > 0 ? 0.314159 : -0.314159);
+    double cross = Vec2::Cross(direction_, desired_direction);
+    direction_.Rotate(cross > 0 ? kMaxAngle : -kMaxAngle);
   }
 
   /* Update speed by boost */
-  velocity_.Add(direction_.Scale(boost));
+  velocity_ += direction_ * boost;
 
   made_progress_ = false;
   progress_time_ = 0.0;
@@ -60,8 +58,7 @@ int Pod::GetBoost(PodControl const& control, int& boosts_available) {
 
 void Pod::EndTurn() {
   /* Apply friction */
-  velocity_ = velocity_.Scale(0.85);
-
+  velocity_ *= 0.85;
   velocity_.Truncate();
   position_.Round();
 }
@@ -77,37 +74,37 @@ void Pod::MakeProgress(double dt, unsigned int checkpoint_count) {
   }
 }
 
-void Pod::Advance(double dt) { position_.Add(velocity_.Scale(dt)); }
+void Pod::Advance(double dt) { position_ += velocity_ * dt; }
 
-void Pod::SetPosition(Vector const& origin, Vector const& direction, double magnitude) {
-  position_ = origin.Shift(direction, magnitude);
+void Pod::SetPosition(Vec2 const& origin, Vec2 const& direction, double magnitude) {
+  position_ = origin + direction * magnitude;
   position_.Round();
 }
 
-void Pod::PointAt(Vector const& at) {
-  direction_ = Vector(position_, at);
+void Pod::PointAt(Vec2 const& at) {
+  direction_ = at - position_;
   direction_.Normalize();
 }
 
 void Pod::CollidePods(Pod& pod1, Pod& pod2) {
-  Vector dp(pod1.position_, pod2.position_);
-  Vector dv(pod1.velocity_, pod2.velocity_);
+  Vec2 dp = pod2.position_ - pod1.position_;
+  Vec2 dv = pod2.velocity_ - pod1.velocity_;
   double m =
       static_cast<double>(pod1.mass_ + pod2.mass_) / static_cast<double>(pod1.mass_ * pod2.mass_);
 
-  float seperation2 = dp.Length() * dp.Length();
-  float product = dp.Dot(dv);
+  double seperation2 = dp.Length() * dp.Length();
+  double product = Vec2::Dot(dp, dv);
 
-  Vector f = dp.Scale(product / (seperation2 * m));
+  Vec2 f = dp * (product / (seperation2 * m));
 
-  pod1.velocity_.Add(f.Scale(1.0 / pod1.mass_));
-  pod2.velocity_.Add(f.Scale(-1.0 / pod2.mass_));
+  pod1.velocity_ += f * (1.0 / pod1.mass_);
+  pod2.velocity_ -= f * (1.0 / pod2.mass_);
 
   float impulse = f.Length();
   if (impulse < 120.0) {
-    f = f.Scale(120.0 / impulse);
+    f *= (120.0 / impulse);
   }
 
-  pod1.velocity_.Add(f.Scale(1.0 / pod1.mass_));
-  pod2.velocity_.Add(f.Scale(-1.0 / pod2.mass_));
+  pod1.velocity_ += f * (1.0 / pod1.mass_);
+  pod2.velocity_ -= f * (1.0 / pod2.mass_);
 }
