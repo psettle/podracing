@@ -23,6 +23,7 @@ struct PodData {
 
 struct MapData {
   MapData(std::istream& input) {
+    std::cout << dynamic_cast<std::istringstream&>(input).str() << std::endl;
     input >> laps;
 
     int checkpoint_count;

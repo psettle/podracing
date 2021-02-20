@@ -9,7 +9,9 @@ int main() {
 
   std::srand(1);
 
-  GameController server(controller1, controller2);
+  GameController server;
+  server.AddPlayer(controller1);
+  server.AddPlayer(controller2);
 
   std::cout << server.RunGame() << std::endl;
   return 0;

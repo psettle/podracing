@@ -8,12 +8,13 @@ INCLUDE=
 
 #header includes
 INCLUDE += src
+INCLUDE += src/engine
 
 #source includes
 SOURCES += src/main.cpp
-SOURCES += src/GameServer.cpp
-SOURCES += src/Pod.cpp
-SOURCES += src/Player.cpp
+SOURCES += src/engine/GameServer.cpp
+SOURCES += src/engine/Pod.cpp
+SOURCES += src/engine/Player.cpp
 
 
 #lib includes

@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -13,13 +14,13 @@ class Player {
  public:
   Player(IPlayer& controller);
   void Setup(std::string const& data);
+  void InitPods(Vec2 const& origin, Vec2 const& direction, double seperation, Vec2 const& target);
   void SetInitialTurnConditions(std::string const& input_data);
   void GetGameInput(std::ostringstream& game_input);
   void EndTurn();
   void AdvancePods(double dt);
 
-  Pod& pod(unsigned int index);
-  Pod const& pod(unsigned int index) const;
+  std::vector<std::unique_ptr<Pod>> const& pods() const { return pods_; }
   bool has_won() const { return has_won_; }
   double win_time() const { return win_time_; }
   bool has_lost() const { return has_lost_; }
@@ -28,7 +29,7 @@ class Player {
   std::vector<PodControl> CollectBotOutput(std::string const& input_data);
 
   IPlayer& controller_;
-  std::vector<Pod> pods_;
+  std::vector<std::unique_ptr<Pod>> pods_;
   std::ostringstream output_;
   std::istringstream input_;
   int timeout_;

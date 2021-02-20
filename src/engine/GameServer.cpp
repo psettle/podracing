@@ -3,8 +3,9 @@
 #include <cstdlib>
 #include <iostream>
 
-GameController::GameController(IPlayer& player0, IPlayer& player1)
-    : player_0_(player0), player_1_(player1) {}
+void GameController::AddPlayer(IPlayer& player) {
+  players_.push_back(std::make_unique<Player>(player));
+}
 
 void GameController::InitMap() {
   /* Populate checkpoints */
@@ -22,12 +23,13 @@ void GameController::InitMap() {
   }
 
   /* Send map to players */
-  player_0_.Setup(map_string.str());
-  player_1_.Setup(map_string.str());
+  for (auto& player : players_) {
+    player->Setup(map_string.str());
+  }
 }
 
 void GameController::InitPods() {
-  static double constexpr seperation = 1000.0;
+  static double constexpr kSeperation = 1000.0;
 
   /* Pods are placed on a line passing through the checkpoint perpendicular to
    * the vector pointing to the first checkpoint. */
@@ -35,38 +37,36 @@ void GameController::InitPods() {
   Vec2 placement_line = Vec2::Perpendicular(initial_direction);
   placement_line.Normalize();
 
-  Vec2 start(map_[0]);
-
   /* Player 0 gets inside lane */
-  player_0_.pod(0).SetPosition(start, placement_line, seperation / 2);
-  player_0_.pod(1).SetPosition(start, placement_line, -seperation / 2);
-
-  /* Player 1 gets outside lane */
-  player_1_.pod(0).SetPosition(start, placement_line, 3 * seperation / 2);
-  player_1_.pod(1).SetPosition(start, placement_line, -3 * seperation / 2);
-
-  /* Pods aim at the first checkpoint */
-  player_0_.pod(0).PointAt(map_[1]);
-  player_0_.pod(1).PointAt(map_[1]);
-  player_1_.pod(0).PointAt(map_[1]);
-  player_1_.pod(1).PointAt(map_[1]);
+  double seperation = 500;
+  for (auto& player : players_) {
+    player->InitPods(map_[0], placement_line, seperation, map_[1]);
+    seperation += kSeperation;
+  }
 }
 
 int GameController::Turn() {
   std::cout << "frame: " << frame_count << std::endl;
   /* Tell players the current game state. */
-  std::ostringstream player_0_data;
-  std::ostringstream player_1_data;
+  std::vector<std::ostringstream> player_data(players_.size());
 
-  player_0_.GetGameInput(player_0_data);
-  player_1_.GetGameInput(player_1_data);
+  for (unsigned int i = 0; i < players_.size(); ++i) {
+    players_[i]->GetGameInput(player_data[i]);
+  }
 
-  std::string player_0_input = player_0_data.str() + player_1_data.str();
-  std::string player_1_input = player_1_data.str() + player_0_data.str();
+  for (unsigned int i = 0; i < players_.size(); ++i) {
+    std::string player_input = player_data[i].str();
 
-  /* Update direction and speed on each pod */
-  player_0_.SetInitialTurnConditions(player_0_input);
-  player_1_.SetInitialTurnConditions(player_1_input);
+    for (unsigned int j = 0; j < players_.size(); ++j) {
+      if (i == j) {
+        continue;
+      }
+
+      player_input + player_data[j].str();
+    }
+
+    players_[i]->SetInitialTurnConditions(player_input);
+  }
 
   double turn_time_remaining = 1.0;
   while (true) {
@@ -88,16 +88,18 @@ int GameController::Turn() {
     }
 
     if (checkpoint_collision && dt_checkpoint <= turn_time_remaining) {
-      player_0_.AdvancePods(dt_checkpoint);
-      player_1_.AdvancePods(dt_checkpoint);
+      for (auto& player : players_) {
+        player->AdvancePods(dt_checkpoint);
+      }
       turn_time_remaining -= dt_checkpoint;
       pod_checkpoint->MakeProgress(dt_checkpoint, map_.size());
       continue;
     }
 
     if (pod_collision && dt_pod <= turn_time_remaining) {
-      player_0_.AdvancePods(dt_pod);
-      player_1_.AdvancePods(dt_pod);
+      for (auto& player : players_) {
+        player->AdvancePods(dt_pod);
+      }
       turn_time_remaining -= dt_pod;
       Pod::CollidePods(*pod_collision_1, *pod_collision_2);
       continue;
@@ -106,26 +108,40 @@ int GameController::Turn() {
     break;
   }
 
-  player_0_.AdvancePods(turn_time_remaining);
-  player_1_.AdvancePods(turn_time_remaining);
+  for (auto& player : players_) {
+    player->AdvancePods(turn_time_remaining);
+    player->EndTurn();
+  }
 
-  player_0_.EndTurn();
-  player_1_.EndTurn();
   frame_count++;
+  return GetWinner();
+}
 
-  if (player_1_.has_lost()) {
-    return 0;
+int GameController::GetWinner() const {
+  unsigned int lost_players = 0;
+  double win_time = 2.0;
+  int win_player = -1;
+  for (unsigned int i = 0; i < players_.size(); ++i) {
+    if (players_[i]->has_won() && players_[i]->win_time() < win_time) {
+      win_time = players_[i]->win_time();
+      win_player = i;
+    }
+
+    if (players_[i]->has_lost()) {
+      lost_players++;
+    }
   }
-  if (player_0_.has_lost()) {
-    return 1;
+
+  if (win_player != -1) {
+    return win_player;
   }
-  if (player_0_.has_won() &&
-      (!player_1_.has_won() || player_0_.win_time() < player_1_.win_time())) {
-    return 0;
-  }
-  if (player_1_.has_won() &&
-      (!player_0_.has_won() || player_1_.win_time() < player_0_.win_time())) {
-    return 1;
+
+  if (lost_players == players_.size() - 1) {
+    for (unsigned int i = 0; i < players_.size(); ++i) {
+      if (!players_[i]->has_lost()) {
+        return i;
+      }
+    }
   }
 
   return -1;
@@ -153,19 +169,24 @@ int GameController::RunGame() {
 
 bool GameController::GetNextCheckpointCollision(double& dt, Pod*& pod) {
   /* Set 2.0 as the collision tme for each pod, since we only accept 1 or less as valid. */
-  Pod* pods[] = {&player_0_.pod(0), &player_0_.pod(1), &player_1_.pod(0), &player_1_.pod(1)};
-  double collision_times[] = {2.0, 2.0, 2.0, 2.0};
+  std::vector<Pod*> pods;
+  std::vector<double> times;
+  for (auto const& player : players_) {
+    for (auto const& pod : player->pods()) {
+      pods.push_back(pod.get());
+      times.push_back(2.0);
+    }
+  }
 
   /* Check when each pod will collide with its checkpoint */
   bool found = false;
-  for (unsigned int i = 0; i < 4; ++i) {
-    double collision_time;
+  for (unsigned int i = 0; i < pods.size(); ++i) {
+    double time;
     Pod const* p = pods[i];
     Vec2 const& checkpoint = map_.at(p->next_checkpoint());
-    if (GetNextCollision(p->position(), p->velocity(), 0, checkpoint, Vec2(0, 0), 600,
-                         collision_time)) {
-      if (collision_time < collision_times[i] && collision_time < 1.0) {
-        collision_times[i] = collision_time;
+    if (GetNextCollision(p->position(), p->velocity(), 0, checkpoint, Vec2(), 600, time)) {
+      if (time < times[i] && time < 1.0) {
+        times[i] = time;
         found = true;
       }
     }
@@ -177,9 +198,9 @@ bool GameController::GetNextCheckpointCollision(double& dt, Pod*& pod) {
 
   /* Find the earliest pod collision. */
   dt = 2.0;
-  for (unsigned int i = 0; i < 4; ++i) {
-    if (collision_times[i] < dt) {
-      dt = collision_times[i];
+  for (unsigned int i = 0; i < pods.size(); ++i) {
+    if (times[i] < dt) {
+      dt = times[i];
       pod = pods[i];
     }
   }
@@ -189,21 +210,32 @@ bool GameController::GetNextCheckpointCollision(double& dt, Pod*& pod) {
 bool GameController::GetNextPlayerCollision(double& dt, Pod*& pod1, Pod*& pod2) {
   /* We need to check each pair of pods to see if they will collide, and find the earliest
    * collision. */
-  Pod* pods[] = {&player_0_.pod(0), &player_0_.pod(1), &player_1_.pod(0), &player_1_.pod(1)};
-  double collision_times[4][4] = {
-      {2.0, 2.0, 2.0, 2.0}, {2.0, 2.0, 2.0, 2.0}, {2.0, 2.0, 2.0, 2.0}, {2.0, 2.0, 2.0, 2.0}};
+  std::vector<Pod*> pods;
+  for (auto const& player : players_) {
+    for (auto const& pod : player->pods()) {
+      pods.push_back(pod.get());
+    }
+  }
+
+  std::vector<std::vector<double>> times;
+  for (unsigned int i = 0; i < pods.size(); ++i) {
+    times.push_back(std::vector<double>());
+    for (unsigned int j = 0; j < pods.size(); ++j) {
+      times[i].push_back(2.0);
+    }
+  }
 
   bool found = false;
-  for (unsigned int i = 0; i < 3; ++i) {
-    for (unsigned int j = i + 1; j < 4; ++j) {
-      double collision_time;
+  for (unsigned int i = 0; i < pods.size() - 1; ++i) {
+    for (unsigned int j = i + 1; j < pods.size(); ++j) {
+      double time;
       Pod const* p1 = pods[i];
       Pod const* p2 = pods[j];
 
       if (GetNextCollision(p1->position(), p1->velocity(), 400, p2->position(), p2->velocity(), 400,
-                           collision_time)) {
-        if (collision_time < collision_times[i][j] && collision_time < 1.0) {
-          collision_times[i][j] = collision_time;
+                           time)) {
+        if (time < times[i][j] && time < 1.0) {
+          times[i][j] = time;
           found = true;
         }
       }
@@ -216,10 +248,10 @@ bool GameController::GetNextPlayerCollision(double& dt, Pod*& pod1, Pod*& pod2) 
 
   /* Find the earliest pod collision. */
   dt = 2.0;
-  for (unsigned int i = 0; i < 3; ++i) {
-    for (unsigned int j = i + 1; j < 4; ++j) {
-      if (collision_times[i][j] < dt) {
-        dt = collision_times[i][j];
+  for (unsigned int i = 0; i < pods.size() - 1; ++i) {
+    for (unsigned int j = i + 1; j < pods.size(); ++j) {
+      if (times[i][j] < dt) {
+        dt = times[i][j];
         pod1 = pods[i];
         pod2 = pods[j];
       }
