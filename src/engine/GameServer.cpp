@@ -16,10 +16,23 @@ void GameController::InitMap() {
   map_string << num_checkpoints << std::endl;
 
   for (int i = 0; i < num_checkpoints; ++i) {
-    map_.push_back(Vec2(std::rand() % 16000, std::rand() % 9000));
+    while (true) {
+      double closest = INFINITY;
+      Vec2 candidate(std::rand() % 16000, std::rand() % 9000);
+      for (unsigned int j = 0; j < map_.size(); ++j) {
+        double distance = (map_[j] - candidate).Length();
 
+        if (distance < closest) {
+          closest = distance;
+        }
+      }
+
+      if (closest > 1200) {
+        map_.push_back(candidate);
+        break;
+      }
+    }
     map_string << map_.back().x() << " " << map_.back().y() << std::endl;
-    std::cout << map_.back().x() << " " << map_.back().y() << std::endl;
   }
 
   /* Send map to players */
@@ -46,7 +59,6 @@ void GameController::InitPods() {
 }
 
 int GameController::Turn() {
-  std::cout << "frame: " << frame_count << std::endl;
   /* Tell players the current game state. */
   std::vector<std::ostringstream> player_data(players_.size());
 
@@ -62,14 +74,14 @@ int GameController::Turn() {
         continue;
       }
 
-      player_input + player_data[j].str();
+      player_input += player_data[j].str();
     }
 
-    players_[i]->SetInitialTurnConditions(player_input);
+    players_[i]->SetInitialTurnConditions(player_input, frame_count == 0);
   }
 
   double turn_time_remaining = 1.0;
-  while (true) {
+  for (unsigned int t = 0; t < 1000; ++t) {
     double dt_checkpoint;
     Pod* pod_checkpoint = nullptr;
     double dt_pod;
@@ -165,6 +177,16 @@ int GameController::RunGame() {
         return 1;
     }
   }
+}
+
+double GameController::GetFitness(unsigned int index) const {
+  Player const& player = *players_.at(index);
+
+  /* +1 for each missing checkpoint */
+  double pod1_fitness = player.pods().at(0)->GetFitness(map_);
+  double pod2_fitness = player.pods().at(1)->GetFitness(map_);
+
+  return std::min(pod1_fitness, pod2_fitness);
 }
 
 bool GameController::GetNextCheckpointCollision(double& dt, Pod*& pod) {

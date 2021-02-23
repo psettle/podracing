@@ -1,5 +1,6 @@
 #include "Pod.hpp"
 #include <cmath>
+#include <vector>
 
 void Pod::WritePodState(std::ostream& output) const {
   output << static_cast<int>(position_.x()) << " " << static_cast<int>(position_.y()) << " "
@@ -7,7 +8,7 @@ void Pod::WritePodState(std::ostream& output) const {
          << direction_.Degrees() << " " << target_checkpoint_ << std::endl;
 }
 
-void Pod::SetTurnConditions(PodControl const& control, int& boosts_available) {
+void Pod::SetTurnConditions(PodControl const& control, int& boosts_available, bool first_frame) {
   static double const kMaxAngle = Vec2::pi() / 10;
 
   /* Figure out current thrust value */
@@ -22,7 +23,7 @@ void Pod::SetTurnConditions(PodControl const& control, int& boosts_available) {
   double dot = Vec2::Cap(Vec2::Dot(direction_, desired_direction), 1.0);
 
   double angle = std::acos(dot);
-  if (angle < kMaxAngle) {
+  if (angle < kMaxAngle || first_frame) {
     direction_ = desired_direction;
   } else {
     double cross = Vec2::Cross(direction_, desired_direction);
@@ -107,4 +108,30 @@ void Pod::CollidePods(Pod& pod1, Pod& pod2) {
 
   pod1.velocity_ += f * (1.0 / pod1.mass_);
   pod2.velocity_ -= f * (1.0 / pod2.mass_);
+}
+
+double Pod::GetFitness(std::vector<Vec2> const& map) const {
+  /* Number of checkpoints that need to be hit */
+  double max_fitness = (3 * map.size() + 1);
+  double fitness = max_fitness;
+
+  /* Number of checkpoints actually hit */
+  fitness -= (lap_ * map.size() + target_checkpoint_);
+
+  if (fitness > 0) {
+    /* Add distance to next checkpoint */
+    unsigned int prev_checkpoint = target_checkpoint_;
+    if (prev_checkpoint > 0) {
+      prev_checkpoint--;
+    } else {
+      prev_checkpoint = map.size() - 1;
+    }
+    // Vec2 segment = map.at(target_checkpoint_) - map.at(prev_checkpoint);
+
+    // Vec2 distance = map.at(target_checkpoint_) - position_;
+
+    // fitness += distance.Length() / segment.Length();
+  }
+
+  return fitness / max_fitness;
 }

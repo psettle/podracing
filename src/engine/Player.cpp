@@ -10,7 +10,6 @@ Player::Player(IPlayer& controller)
 void Player::Setup(std::string const& data) {
   input_.clear();
   input_.str(data);
-  std::cout << data;
   controller_.Setup();
 }
 
@@ -22,11 +21,11 @@ void Player::InitPods(Vec2 const& origin, Vec2 const& direction, double seperati
   pods_[1]->PointAt(target);
 }
 
-void Player::SetInitialTurnConditions(std::string const& input_data) {
+void Player::SetInitialTurnConditions(std::string const& input_data, bool first_frame) {
   std::vector<PodControl> control = CollectBotOutput(input_data);
 
   for (unsigned int i = 0; i < control.size(); ++i) {
-    pods_[i]->SetTurnConditions(control[i], boosts_available_);
+    pods_[i]->SetTurnConditions(control[i], boosts_available_, first_frame);
   }
 }
 

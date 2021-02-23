@@ -1,18 +1,19 @@
-#include <cstdlib>
-#include <iostream>
-#include "GameServer.hpp"
-#include "dumbcontroller.hpp"
-
+#include <ctime>
+#include "GeneticAlgorithm.hpp"
+#include "NeuralNetworkFactory.hpp"
 int main() {
-  DumbController controller1;
-  DumbController controller2;
+  NeuralNetworkFactory f;
+  GeneticAlgorithm<NNPair> ga(f, 100);
 
-  std::srand(1);
+  for (unsigned int g = 0; g < 10000; ++g) {
+    std::srand(std::time(0));
+    NNPair best = ga.Generation();
 
-  GameController server;
-  server.AddPlayer(controller1);
-  server.AddPlayer(controller2);
+    if (g % 50 == 0 && g != 0) {
+      std::cout << best.Save() << std::endl;
+    }
+  }
 
-  std::cout << server.RunGame() << std::endl;
+  std::cout << ga.GetBest().Save() << std::endl;
   return 0;
 }

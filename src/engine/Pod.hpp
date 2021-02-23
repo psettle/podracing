@@ -4,6 +4,7 @@
 #include <math.h>
 #include <iostream>
 #include <string>
+#include <vector>
 #include "Vec2.hpp"
 
 struct PodControl {
@@ -15,7 +16,7 @@ struct PodControl {
 class Pod {
  public:
   void WritePodState(std::ostream& output) const;
-  void SetTurnConditions(PodControl const& control, int& boost_remaining);
+  void SetTurnConditions(PodControl const& control, int& boost_remaining, bool first_frame);
   void EndTurn();
   void MakeProgress(double dt, unsigned int checkpoint_count);
   void Advance(double dt);
@@ -28,6 +29,7 @@ class Pod {
   unsigned int next_checkpoint() const { return target_checkpoint_; }
   Vec2 const& position() const { return position_; }
   Vec2 const& velocity() const { return velocity_; }
+  double GetFitness(std::vector<Vec2> const& map) const;
 
   static void CollidePods(Pod& pod1, Pod& pod2);
 

@@ -7,9 +7,22 @@
 enum class Owner { Me, Opponent };
 
 struct PodData {
+  PodData() {}
+
   PodData(std::istream& input, int id, Owner owner) : id(id), owner(owner) {
     input >> x >> y >> vx >> vy >> angle >> next_checkpoint_id;
   }
+
+  // void operator=(PodData const& pod) {
+  //   id = pod.id;
+  //   owner = pod.owner;
+  //   x = pod.x;
+  //   y = pod.y;
+  //   vx = pod.vx;
+  //   vy = pod.vy;
+  //   angle = pod.angle;
+  //   next_checkpoint_id = pod.next_checkpoint_id;
+  // }
 
   int id;
   Owner owner;
@@ -23,7 +36,6 @@ struct PodData {
 
 struct MapData {
   MapData(std::istream& input) {
-    std::cout << dynamic_cast<std::istringstream&>(input).str() << std::endl;
     input >> laps;
 
     int checkpoint_count;

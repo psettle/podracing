@@ -19,6 +19,8 @@ class GameController {
   // Return winning player (0 or 1)
   int RunGame();
 
+  double GetFitness(unsigned int player) const;
+
  private:
   void InitMap();
   void InitPods();

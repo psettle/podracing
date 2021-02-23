@@ -15,7 +15,7 @@ class Player {
   Player(IPlayer& controller);
   void Setup(std::string const& data);
   void InitPods(Vec2 const& origin, Vec2 const& direction, double seperation, Vec2 const& target);
-  void SetInitialTurnConditions(std::string const& input_data);
+  void SetInitialTurnConditions(std::string const& input_data, bool first_frame);
   void GetGameInput(std::ostringstream& game_input);
   void EndTurn();
   void AdvancePods(double dt);

@@ -26,10 +26,6 @@ class DumbController : public IPlayer {
     PodData me2(*input_, 2, Owner::Me);
     PodData op1(*input_, 1, Owner::Opponent);
     PodData op2(*input_, 2, Owner::Opponent);
-    std::cout << "Positions: " << me1.x << " " << me1.y << " " << me2.x << " " << me2.y
-              << std::endl;
-    std::cout << "Speeds: " << me1.vx << " " << me1.vy << " " << me2.vx << " " << me2.vy
-              << std::endl;
 
     double thrust = 1.0;
 
