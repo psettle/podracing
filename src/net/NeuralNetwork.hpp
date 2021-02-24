@@ -31,7 +31,7 @@ class NeuralNetwork {
   Activations ApplyLayer(Layer const& layer, Activations const& input);
 
   static inline double Relu(double a) { return std::max(0.0, a); }
-  static inline double sig(double a) { return (a / (1 + std::abs(a))); }
+  static inline double sig(double a) { return (2 * a / (1 + std::abs(a))); }
 
   static double fRand(double fMin, double fMax) {
     double f = (double)std::rand() / RAND_MAX;

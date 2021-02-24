@@ -148,12 +148,15 @@ int GameController::GetWinner() const {
     return win_player;
   }
 
-  if (lost_players == players_.size() - 1) {
+  if (lost_players >= players_.size() - 1) {
     for (unsigned int i = 0; i < players_.size(); ++i) {
       if (!players_[i]->has_lost()) {
         return i;
       }
     }
+  }
+  if (lost_players == 2) {
+    return -2;
   }
 
   return -1;
@@ -175,6 +178,9 @@ int GameController::RunGame() {
       case 1:
         /* Player 1 won. */
         return 1;
+      case -2:
+        /* Both lost */
+        return -2;
     }
   }
 }

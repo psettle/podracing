@@ -1,5 +1,5 @@
 #config
-DEBUG=0
+DEBUG=1
 
 #setup
 SOURCES=
@@ -11,7 +11,7 @@ INCLUDE += src
 INCLUDE += src/engine
 INCLUDE += src/net
 INCLUDE += src/ga
-INCLUDE += src/mingw
+INCLUDE += src/controller
 
 #source includes
 SOURCES += src/main.cpp
@@ -19,6 +19,8 @@ SOURCES += src/engine/GameServer.cpp
 SOURCES += src/engine/Pod.cpp
 SOURCES += src/engine/Player.cpp
 SOURCES += src/net/NeuralNetwork.cpp
+SOURCES += src/controller/DualAdvancedRunner.cpp
+SOURCES += src/controller/TrainedNetworks.cpp
 
 
 #lib includes

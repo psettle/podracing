@@ -1,5 +1,5 @@
-#ifndef SIMPLENET_HPP
-#define SIMPLENET_HPP
+#ifndef DUALSIMPLERUNNER_HPP
+#define DUALSIMPLERUNNER_HPP
 
 #include <math.h>
 #include <iostream>
@@ -12,7 +12,7 @@
 #include "input.hpp"
 #include "output.hpp"
 
-class SimpleNet : public IPlayer {
+class DualSimpleRunner : public IPlayer {
  public:
   enum NetworkInput {
     INPUT_NEXT_CHECKPOINT_DISTANCE,
@@ -32,7 +32,7 @@ class SimpleNet : public IPlayer {
     OUTPUT_COUNT
   };
 
-  SimpleNet(NeuralNetwork& core) : boosts_left_(1), network_(core) {}
+  DualSimpleRunner(NeuralNetwork& core) : boosts_left_(1), network_(core) {}
 
   void SetStreams(std::istream& input, std::ostream& output) override {
     input_ = &input;

@@ -104,8 +104,8 @@ T GeneticAlgorithm<T>::Generation() {
   for (unsigned int i = 0; i < pop_; ++i) {
     unsigned int rand1 = std::rand() % survivors.size();
     unsigned int rand2 = std::rand() % survivors.size();
-    if (i == 0) {
-      population_.push_back(survivors[0]);
+    if (i < 5) {
+      population_.push_back(survivors[i]);
     } else if (i % 2 == 0) {
       population_.push_back(factory_.CrossMutate(survivors[rand1], survivors[rand2]));
     } else {

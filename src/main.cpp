@@ -3,11 +3,11 @@
 #include "NeuralNetworkFactory.hpp"
 int main() {
   NeuralNetworkFactory f;
-  GeneticAlgorithm<NNPair> ga(f, 100);
+  GeneticAlgorithm<NeuralNetwork> ga(f, 200);
 
   for (unsigned int g = 0; g < 10000; ++g) {
     std::srand(std::time(0));
-    NNPair best = ga.Generation();
+    NeuralNetwork best = ga.Generation();
 
     if (g % 50 == 0 && g != 0) {
       std::cout << best.Save() << std::endl;
