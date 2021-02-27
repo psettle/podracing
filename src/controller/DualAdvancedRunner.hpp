@@ -7,11 +7,10 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include "GameIO.hpp"
 #include "IPlayer.hpp"
 #include "NeuralNetwork.hpp"
 #include "Vec2.hpp"
-#include "input.hpp"
-#include "output.hpp"
 
 class DualAdvancedRunner : public IPlayer {
  public:

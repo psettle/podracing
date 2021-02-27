@@ -51,10 +51,12 @@ void GameController::InitPods() {
   placement_line.Normalize();
 
   /* Player 0 gets inside lane */
-  double seperation = 500;
-  for (auto& player : players_) {
-    player->InitPods(map_[0], placement_line, seperation, map_[1]);
-    seperation += kSeperation;
+  if (rand() % 2 == 0) {
+    players_[0]->InitPods(map_[0], placement_line, kSeperation / 2, map_[1]);
+    players_[1]->InitPods(map_[0], placement_line, 3 * kSeperation / 2, map_[1]);
+  } else {
+    players_[1]->InitPods(map_[0], placement_line, kSeperation / 2, map_[1]);
+    players_[0]->InitPods(map_[0], placement_line, 3 * kSeperation / 2, map_[1]);
   }
 }
 

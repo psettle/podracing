@@ -20,6 +20,7 @@
 // 2 - should_boost = (val >= 0.0)
 // 3 - should_shield = (val >= 0.0)
 extern std::string const advanced_runner;
+extern std::string const advanced_runner_v2;
 
 // input:
 //  0 - max(next_checkpoint_distance / 16000, 1.0)

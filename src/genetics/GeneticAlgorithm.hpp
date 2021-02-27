@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <algorithm>
+#include <ctime>
 #include <iostream>
 #include <vector>
 
@@ -20,9 +21,7 @@ class GeneticAlgorithm {
  public:
   GeneticAlgorithm(ISpeciesFactory<T>& factory, unsigned int pop = 1000);
 
-  T Generation();
-
-  T GetBest() const { return best_; };
+  T Generation(unsigned int generation_index);
 
  private:
   struct EvaluateParams {
@@ -31,18 +30,19 @@ class GeneticAlgorithm {
     unsigned int index;
     unsigned int size;
     ISpeciesFactory<T>* factory;
+    unsigned int seed;
   };
 
   static DWORD WINAPI Evaluate(LPVOID lpParameter) {
     EvaluateParams* params = static_cast<EvaluateParams*>(lpParameter);
     for (unsigned int i = 0; i < params->size; ++i) {
+      std::srand(params->seed);
       params->evals[i] = std::pair<unsigned int, double>(
           params->index + i, params->factory->Evaluate(params->candidates[i]));
     }
     return 0;
   }
 
-  T best_;
   ISpeciesFactory<T>& factory_;
   std::vector<T> population_;
   unsigned int pop_;
@@ -50,20 +50,20 @@ class GeneticAlgorithm {
 
 template <class T>
 GeneticAlgorithm<T>::GeneticAlgorithm(ISpeciesFactory<T>& factory, unsigned int pop)
-    : best_(), factory_(factory), pop_(pop) {
+    : factory_(factory), pop_(pop) {
   for (unsigned int i = 0; i < pop_; ++i) {
     population_.push_back(factory_.GenerateRandomSpecies());
   }
 }
 
+static unsigned int constexpr kSavedPeaks = 1;
 template <class T>
-
-T GeneticAlgorithm<T>::Generation() {
+T GeneticAlgorithm<T>::Generation(unsigned int generation_index) {
   std::vector<std::pair<unsigned int, double>> evals(pop_);
   std::vector<HANDLE> threads;
 
   unsigned int pop = pop_;
-  unsigned int batches = 12;
+  unsigned int batches = 16;
   std::vector<EvaluateParams> params(batches);
 
   for (unsigned int i = 0; i < batches; ++i) {
@@ -78,6 +78,7 @@ T GeneticAlgorithm<T>::Generation() {
     p.size = batch_size;
     p.factory = &factory_;
     p.index = index;
+    p.seed = std::time(0);
     params[i] = p;
 
     HANDLE h =
@@ -88,7 +89,7 @@ T GeneticAlgorithm<T>::Generation() {
   for (auto& thread : threads) {
     WaitForSingleObject(thread, INFINITE);
   }
-  std::srand(std::time(0));
+
   std::sort(
       evals.begin(), evals.end(),
       [](std::pair<unsigned int, double> const& left,
@@ -104,18 +105,20 @@ T GeneticAlgorithm<T>::Generation() {
   for (unsigned int i = 0; i < pop_; ++i) {
     unsigned int rand1 = std::rand() % survivors.size();
     unsigned int rand2 = std::rand() % survivors.size();
-    if (i < 5) {
+    if (i == 0) {
       population_.push_back(survivors[i]);
-    } else if (i % 2 == 0) {
-      population_.push_back(factory_.CrossMutate(survivors[rand1], survivors[rand2]));
     } else {
-      population_.push_back(factory_.SparseMutate(survivors[rand1]));
+      population_.push_back(factory_.CrossMutate(survivors[rand1], survivors[rand2]));
     }
   }
 
-  std::cout << " best: " << evals[0].second << std::endl;
-  best_ = population_[0];
-  return best_;
+  std::cout << "gen" << generation_index << " best: ";
+  for (unsigned int i = 0; i < 10; ++i) {
+    std::cout << evals[i].second << " ";
+  }
+  std::cout << std::endl;
+
+  return population_[0];
 }
 
 #endif
